@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VirtueMap AI - Annotation Survey</title>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="dilemmas.js"></script>
+  <style>
+    :root { --blue:#183a7a; --light:#f6f8ff; --border:#d7def2; --green:#0f766e; --red:#b91c1c; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Arial, sans-serif; background: linear-gradient(180deg,#f8fbff,#eef4ff); color:#1f2937; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px; }
+    .card { background: white; border:1px solid var(--border); border-radius:18px; padding:24px; box-shadow:0 8px 24px rgba(30,64,175,.08); }
+    h1 { color: var(--blue); margin:0 0 8px; }
+    h2 { color: var(--blue); }
+    .muted { color:#64748b; line-height:1.5; }
+    button { border:0; border-radius:12px; padding:12px 18px; font-weight:700; cursor:pointer; }
+    .primary { background:var(--blue); color:white; }
+    .secondary { background:#e8eefc; color:var(--blue); }
+    .yes { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+    .no { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .option { background:#f8fafc; border:1px solid #dbe3f0; border-radius:12px; padding:12px; margin:8px 0; }
+    .option strong { color:var(--blue); }
+    .order-list { list-style:none; padding:0; margin:14px 0; }
+    .order-list li { padding:12px; margin:8px 0; border:1px solid #cbd5e1; border-radius:12px; background:#f8fafc; cursor:grab; }
+    .order-list li:active { cursor:grabbing; }
+    .virtuebox { border-left:5px solid var(--green); background:#f0fdfa; padding:14px; border-radius:10px; margin:16px 0; }
+    .progress { height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden; margin:18px 0; }
+    .bar { height:100%; background:var(--blue); width:0%; transition:.2s; }
+    .hidden { display:none; }
+    .small { font-size:13px; color:#64748b; }
+    input[type=text] { width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:10px; }
+    .pill { background:#eef2ff; border:1px solid #c7d2fe; border-radius:999px; padding:6px 10px; font-size:13px; color:#3730a3; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="app" class="card"></div>
+  </div>
+
+<script>
+// 1) After deploying Apps Script, paste your Web App URL here.
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwh8RUEzwzwLr6SeDVXBztzB66WPNB56pHCwOYj-aE2a_F2DpVrKWxYFiJyaH9FOXoZ/exec';
+
+const app = document.getElementById('app');
+const participantId = localStorage.getItem('participantId') || crypto.randomUUID();
+localStorage.setItem('participantId', participantId);
+
+let tasks = [];
+DILEMMAS.forEach(d => VIRTUES.forEach(v => tasks.push({dilemma:d, virtue:v})));
+let i = 0;
+let responses = [];
+
+function orderText(order, options) {
+  return order.map(x => `<li data-id="${x}"><strong>${x}.</strong> ${options[x]}</li>`).join('');
+}
+function progress() { return Math.round((i / tasks.length) * 100); }
+
+function intro() {
+  app.innerHTML = `
+    <h1>VirtueMap AI Annotation Survey</h1>
+    <p class="muted">You will validate proposed rankings of responses to ethical dilemmas according to five Aristotelian virtues.</p>
+    <p class="muted">For each task, read the dilemma, the five responses, and the virtue definition. Then answer whether you agree with the proposed ordering. If you disagree, drag and drop the responses into your preferred order.</p>
+    <p class="muted"><strong>This is not about choosing the morally correct answer.</strong> It is about whether a response expresses a virtue more or less strongly.</p>
+    <div class="row"><span class="pill">7 dilemmas</span><span class="pill">5 virtues</span><span class="pill">35 validation tasks</span></div>
+    <br><button class="primary" onclick="renderTask()">Start</button>
+  `;
+}
+
+function renderTask() {
+  if (i >= tasks.length) return finish();
+  const {dilemma, virtue} = tasks[i];
+  const proposed = dilemma.proposed[virtue.id];
+  app.innerHTML = `
+    <div class="small">Participant: ${participantId}</div>
+    <div class="progress"><div class="bar" style="width:${progress()}%"></div></div>
+    <div class="small">Task ${i+1} of ${tasks.length}</div>
+    <h2>${dilemma.id}: ${dilemma.title}</h2>
+    <p>${dilemma.scenario}</p>
+    <h3>Responses</h3>
+    ${Object.entries(dilemma.options).map(([k,t]) => `<div class="option"><strong>${k}.</strong> ${t}</div>`).join('')}
+    <div class="virtuebox">
+      <h3>${virtue.name}</h3>
+      <p>${virtue.definition}</p>
+    </div>
+    <h3>Proposed ordering</h3>
+    <p class="muted">From <strong>MOST ${virtue.name}-oriented</strong> to <strong>LEAST ${virtue.name}-oriented</strong>:</p>
+    <ol class="order-list">${orderText(proposed, dilemma.options)}</ol>
+    <h3>Do you agree with this ordering?</h3>
+    <div class="row">
+      <button class="yes" onclick="recordYes()">Yes, I agree</button>
+      <button class="no" onclick="showCorrection()">No, I would reorder it</button>
+    </div>
+    <div id="correction" class="hidden">
+      <h3>Your corrected ordering</h3>
+      <p class="muted">Drag and drop the responses from MOST to LEAST ${virtue.name}-oriented.</p>
+      <ol id="draglist" class="order-list">${orderText(proposed, dilemma.options)}</ol>
+      <button class="primary" onclick="recordNo()">Submit corrected ordering</button>
+    </div>
+  `;
+}
+
+function recordYes() {
+  const {dilemma, virtue} = tasks[i];
+  responses.push({ dilemmaId:dilemma.id, virtueId:virtue.id, virtueName:virtue.name, agree:true, proposedOrder:dilemma.proposed[virtue.id], correctedOrder:null });
+  i++; renderTask();
+}
+
+function showCorrection() {
+  document.getElementById('correction').classList.remove('hidden');
+  new Sortable(document.getElementById('draglist'), { animation:150 });
+}
+
+function recordNo() {
+  const {dilemma, virtue} = tasks[i];
+  const corrected = [...document.querySelectorAll('#draglist li')].map(li => li.dataset.id);
+  responses.push({ dilemmaId:dilemma.id, virtueId:virtue.id, virtueName:virtue.name, agree:false, proposedOrder:dilemma.proposed[virtue.id], correctedOrder:corrected });
+  i++; renderTask();
+}
+
+async function finish() {
+  app.innerHTML = `<h1>Submitting...</h1><p class="muted">Please wait.</p>`;
+  const payload = {
+    studyMode:'virtue_order_validation',
+    participantId,
+    userAgent:navigator.userAgent,
+    responses,
+    meta:{version:'v1', totalTasks:tasks.length}
+  };
+  try {
+    if (!APPS_SCRIPT_URL.includes('PASTE_')) {
+      await fetch(APPS_SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
+    }
+    app.innerHTML = `<h1>Thank you!</h1><p class="muted">Your responses have been recorded.</p><p class="small">If you are testing locally and have not added the Apps Script URL, download/copy the JSON below.</p><textarea style="width:100%;height:180px">${JSON.stringify(payload,null,2)}</textarea>`;
+  } catch (err) {
+    app.innerHTML = `<h1>Submission issue</h1><p>Please copy the JSON below and send it to the researcher.</p><textarea style="width:100%;height:220px">${JSON.stringify(payload,null,2)}</textarea>`;
+  }
+}
+
+intro();
+</script>
+</body>
+</html>
