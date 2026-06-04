@@ -60,18 +60,24 @@ const DILEMMAS = [
     proposed:{wisdom:['C','B','D','A','E'], justice:['B','C','A','D','E'], truthfulness:['A','B','C','D','E'], courage:['A','B','C','D','E'], temperance:['C','D','B','E','A']}
   },
   {
-    id:'D5',
-    title:'The Favor Request',
-    scenario:'A close friend asks you to recommend them for a limited opportunity. You know they are capable, but another applicant you barely know seems stronger based on the available information. Your recommendation could influence the final decision.',
-    options:{
-      A:'Recommend the strongest applicant and do not give your friend special treatment.',
-      B:'Disclose your friendship and provide a cautious, factual recommendation only.',
-      C:'Support your friend while also making clear that others may be more qualified.',
-      D:'Recommend your friend strongly because personal loyalty matters in close relationships.',
-      E:'Use your influence fully to help your friend get the opportunity.'
-    },
-    proposed:{wisdom:['B','C','A','D','E'], justice:['A','B','C','D','E'], truthfulness:['B','A','C','D','E'], courage:['A','B','C','D','E'], temperance:['B','C','A','D','E']}
+  id:'D5',
+  title:'The Favor Request',
+  scenario:'A close friend asks you to recommend them for a limited opportunity. You know they are capable, but another applicant you barely know seems stronger based on the available information. Your recommendation could influence the final decision.',
+  options:{
+    A:'Recommend the strongest applicant and do not give your friend special treatment.',
+    B:'Disclose your friendship and provide a cautious, factual recommendation only.',
+    C:'Support your friend while also making clear that others may be more qualified.',
+    D:'Recommend your friend strongly because personal loyalty matters in close relationships.',
+    E:'Do nothing: decline to recommend anyone and allow the selection process to proceed without your influence.'
   },
+  proposed:{
+    wisdom:['B','C','A','E','D'],
+    justice:['A','B','C','E','D'],
+    truthfulness:['B','A','C','E','D'],
+    courage:['A','B','C','D','E'],
+    temperance:['E','B','C','A','D']
+  }
+},
   {
     id:'D6',
     title:'The Shared Space Conflict',
